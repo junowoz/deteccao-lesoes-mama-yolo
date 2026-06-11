@@ -1,15 +1,13 @@
 %==============================================================================
 %  Detecção e Classificação de Lesões Mamárias em Ultrassonografia com YOLO11
-%  Artigo científico — versão definitiva de submissão
+%  Artigo científico — versão final
 %
-%  Autocontido: apenas pacotes do TeX Live padrão.
-%  Compile com pdfLaTeX (Overleaf: Recompile). Duas passadas resolvem
-%  referências cruzadas e bibliografia.
-%
-%  >>> Valores em VERMELHO (comando \pend) dependem do re-treino final
-%  (100 épocas) no Kaggle. Não submeter enquanto restar algum \pend. <<<
+%  Autocontido (TeX Live padrão). Compile com pdfLaTeX (Overleaf: Recompile),
+%  duas passadas. Requer as figuras na mesma pasta:
+%    fig_exemplos.png, fig_pr_curve.png, fig_cm.png, fig_treino.png
 %==============================================================================
 \documentclass[11pt,a4paper]{article}
+\usepackage{float}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -27,42 +25,34 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage[authoryear,round]{natbib}
 \usepackage{caption}
+\usepackage{subcaption}
 \captionsetup{font=small,labelfont=bf}
-
-\newcommand{\pend}[1][XX]{{\color{red}\textbf{[#1]}}}
-\newcommand{\blfootnote}[1]{%
-  \begingroup\renewcommand\thefootnote{}\footnote{#1}\addtocounter{footnote}{-1}\endgroup}
 
 \setlength{\parindent}{1.25em}
 \setlength{\parskip}{0.35em}
 
 \title{\textbf{Detecção e classificação de lesões mamárias benignas e
-malignas em ultrassonografia por meio de YOLO11}\\[0.3em]
-\large Um estudo de prova de conceito para auxílio ao diagnóstico (CAD)}
+malignas em ultrassonografia por meio de YOLO11}}
 
 \author{%
-Juan José Gouvêa Cardenas\thanks{Autor correspondente.} \and
-Felipe Ramirez Pereira Botero%
+Juan José Gouvêa Cardenas\,$^{1}$
+\and
+Felipe Ramirez Pereira Botero\,$^{2}$
 \\[4pt]
-\small \pend[Afiliação institucional --- preencher]\\
-\small \texttt{\pend[e-mail de contato]}%
+{\small $^{1}$Juno Woz Labs, Manaus, Amazonas, Brasil}\\
+{\small $^{2}$Universidade do Estado do Amazonas (UEA), Manaus, Amazonas, Brasil}\\
+{\small Correspondência: \texttt{inbox@junowoz.com}, \texttt{frpbotero@gmail.com}}
 }
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\blfootnote{\textbf{Aviso.} Trabalho de pesquisa acadêmica em visão
-computacional. O modelo descrito \textbf{não} é um dispositivo médico,
-\textbf{não} realiza diagnóstico e \textbf{não} substitui a avaliação de um
-profissional de saúde. Código e materiais:
-\url{https://github.com/junowoz/deteccao-lesoes-mama-yolo}.}
-
 %==============================================================================
 \begin{abstract}
 \noindent\textbf{Resumo.} O câncer de mama é a neoplasia mais incidente entre
-mulheres no Brasil, e o diagnóstico tardio --- agravado pela escassez de
-radiologistas na rede pública --- contribui para a mortalidade. A
+mulheres no Brasil, e o diagnóstico tardio, agravado pela escassez de
+radiologistas na rede pública, contribui para a mortalidade. A
 ultrassonografia é uma modalidade complementar relevante, sobretudo em mamas
 densas, e sistemas de auxílio computacional ao diagnóstico (\textit{Computer-Aided
 Diagnosis}, CAD) podem apoiar a leitura dos exames. Este trabalho investiga o
@@ -76,13 +66,13 @@ estratificada treino/validação/teste (70/15/15) com semente fixa e conjunto de
 teste cego, e avaliação por \texttt{model.val()} com casamento por interseção
 sobre união (IoU), reportando mAP@50, mAP@50--95 e precisão/revocação/F1 por
 classe, além da taxa de falsos positivos em imagens normais. No conjunto de
-teste, o modelo alcançou mAP@50 de \pend{} e mAP@50--95 de \pend{}, com revocação
-de \pend{} na classe maligno. Os resultados são discutidos contra a faixa
-realista de \emph{detecção} em BUSI puro, e não contra índices de
-\emph{classificação} de conjuntos aumentados, que não são comparáveis. O sistema
-é explicitamente uma prova de conceito de pesquisa, \emph{não} um dispositivo
-médico; suas limitações (defeitos do BUSI, origem monocêntrica, ausência de
-divisão por paciente e de validação externa) são discutidas.
+teste cego, o modelo alcançou mAP@50 de 0,709 e mAP@50--95 de 0,438; por classe,
+a benigna (AP@50 0,785) superou a maligna (AP@50 0,633), com revocação de 0,516
+na classe maligno. Os resultados são interpretados contra a faixa realista de
+\emph{detecção} em BUSI puro, e não contra índices de \emph{classificação} de
+conjuntos aumentados, que não são comparáveis. As limitações do estudo (defeitos
+do BUSI, origem monocêntrica, ausência de divisão por paciente e de validação
+externa) são discutidas.
 
 \medskip
 \noindent\textbf{Palavras-chave:} visão computacional; redes neurais
@@ -92,8 +82,8 @@ diagnóstico (CAD).
 
 \begin{quote}\small
 \textbf{Abstract.} Breast cancer is the most frequent malignancy among women in
-Brazil, and late diagnosis---worsened by the shortage of radiologists in the
-public health system---contributes to mortality. Ultrasound is a relevant
+Brazil, and late diagnosis, worsened by the shortage of radiologists in the
+public health system, contributes to mortality. Ultrasound is a relevant
 complementary modality, especially for dense breasts, and Computer-Aided
 Diagnosis (CAD) systems may support image reading. This work investigates the
 \emph{YOLO11s} object detector to \emph{localize} (bounding box) and
@@ -104,8 +94,8 @@ detection-appropriate protocol: content-hash deduplication before splitting,
 stratified train/validation/test split (70/15/15) with a fixed seed and a blind
 test set, and \texttt{model.val()} evaluation with IoU matching, reporting
 mAP@50, mAP@50--95 and per-class precision/recall/F1, plus the false-positive
-rate on normal images. The system is explicitly a research proof of concept,
-\emph{not} a medical device.
+rate on normal images. On the blind test set, the model reached mAP@50 of 0.709
+and mAP@50--95 of 0.438.
 
 \noindent\textbf{Keywords:} computer vision; convolutional neural networks;
 YOLO; breast ultrasound; object detection; computer-aided diagnosis.
@@ -136,7 +126,7 @@ com ultrassom aumenta a detecção. Sistemas de IA já vêm sendo avaliados como
 como apoio (não substituto) \citep{lang2023}. Detectores de objetos da família
 YOLO (\textit{You Only Look Once}), introduzidos por \citet{redmon2016},
 destacam-se pela inferência em uma única passagem, conciliando precisão e
-velocidade --- propriedades atraentes para sistemas de apoio.
+velocidade, propriedades atraentes para sistemas de apoio.
 
 É essencial delimitar o escopo com rigor. Um modelo de imagem \emph{não
 diagnostica câncer}: ele localiza uma lesão (uma caixa delimitadora) e lhe
@@ -169,7 +159,7 @@ A detecção automática de lesões em ultrassom mamário é um passo clássico 
 sistemas CAD. \citet{yap2018} avaliaram abordagens de aprendizado profundo para a
 detecção de lesões em ultrassom (incluindo uma rede totalmente convolucional por
 transferência de aprendizado), estabelecendo um marco metodológico e apontando a
-ausência de um conjunto comum como obstáculo à comparação entre métodos --- lacuna
+ausência de um conjunto comum como obstáculo à comparação entre métodos, lacuna
 que o BUSI \citep{aldhabyani2020} ajudaria a preencher.
 
 Em \textbf{mamografia}, há evidência consistente de viabilidade da família YOLO:
@@ -185,10 +175,10 @@ validação cruzada, mas em \emph{modalidade distinta} (mamografia).
 \paragraph{Cuidado com métricas não comparáveis.} Parte da literatura sobre o
 BUSI reporta acurácias muito altas (94--99\%) ao tratar a tarefa como
 \emph{classificação por imagem} e/ou ao treinar sobre dados fortemente aumentados
-ou combinados --- por exemplo, \citet{jabeen2022} reportam acurácia superior a
+ou combinados. Por exemplo, \citet{jabeen2022} reportam acurácia superior a
 99\% sobre dados aumentados. Tais números medem uma tarefa diferente (rótulo único
 por imagem, sem localização), frequentemente sobre conjuntos não comparáveis ao
-BUSI puro; não devem servir de linha de base para \emph{detecção}. A
+BUSI puro, e não devem servir de linha de base para \emph{detecção}. A
 Tabela~\ref{tab:related} sintetiza essas diferenças de modalidade e de tarefa.
 
 \begin{table}[t]
@@ -210,7 +200,7 @@ sobre conjuntos aumentados ou combinados não são diretamente comparáveis a um
 \citet{prinzi2024}   & Mamografia (INbreast)  & Detecção      & mAP $0{,}835\pm0{,}098$ (5-fold, +TL) \\
 \citet{mohammed2024} & Mamografia (CBIS-DDSM) & Detecção      & mAP@50 $91{,}15\%$ (+CLAHE) \\
 \citet{jabeen2022}   & Ultrassom (BUSI aum.)  & Classificação & Acurácia $99{,}18\%$ \emph{(aumentado)} \\
-\textbf{Este trabalho} & \textbf{Ultrassom (BUSI dedup.)} & \textbf{Detecção} & \pend[mAP@50/mAP@50--95 --- preencher] \\
+\textbf{Este trabalho} & \textbf{Ultrassom (BUSI dedup.)} & \textbf{Detecção} & \textbf{mAP@50 0,709; mAP@50--95 0,438} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -236,7 +226,7 @@ art.~104863, fev.~2020 (recebido/\textit{online} em nov.~2019). Adota-se
 mama, em formato PNG e resolução média próxima de $500\times500$~px, coletadas em
 2018 de 600 pacientes do sexo feminino (25--75 anos) em um único centro (Baheya
 Hospital, Cairo, Egito), com equipamento LOGIQ~E9. As imagens distribuem-se em
-três classes --- \textit{normal}, \textit{benigna} e \textit{maligna} --- e
+três classes (\textit{normal}, \textit{benigna} e \textit{maligna}) e
 acompanham \emph{máscaras de segmentação} de referência para os casos com lesão,
 recurso raro entre bases públicas de ultrassom mamário e que viabiliza a tarefa
 de detecção. Na cópia distribuída (Kaggle), a contagem é de 437 imagens benignas,
@@ -254,15 +244,15 @@ métricas. Como o BUSI \emph{não} fornece identificadores de paciente, é impos
 garantir divisão por paciente.
 
 Aplica-se, portanto, \textbf{deduplicação por \textit{hash} de conteúdo (MD5)}
-antes de qualquer divisão, mantendo a primeira ocorrência de cada imagem; foram
-removidas \pend[N]{} imagens idênticas (conjunto resultante na
+antes de qualquer divisão, mantendo a primeira ocorrência de cada imagem; foi
+removida 1 imagem idêntica, resultando em 779 imagens (composição na
 Tabela~\ref{tab:splits}). Ressalva-se que parte das duplicatas documentadas no
 BUSI são \emph{near-duplicates} (mesma lesão com leve reprocessamento), não
 capturadas por \textit{hash} exato; essa redundância residual, somada à ausência
 de IDs de paciente, constitui limitação declarada na Seção~\ref{sec:limitacoes}.
-Em comparação com trabalhos que treinam e avaliam sobre o BUSI \emph{bruto}, a
-deduplicação exata e o conjunto de teste cego já reduzem substancialmente o risco
-de superestimação por imagens idênticas entre os conjuntos.
+Ainda assim, em comparação com trabalhos que treinam e avaliam sobre o BUSI
+\emph{bruto}, a deduplicação exata e o conjunto de teste cego reduzem o risco de
+superestimação por imagens idênticas entre os conjuntos.
 
 \subsection{Geração de rótulos de detecção}
 Para cada lesão (uma caixa por máscara, contemplando os casos multilesão do BUSI),
@@ -293,13 +283,14 @@ distorções geométricas pouco plausíveis na modalidade.
 
 \subsection{Arquitetura e configuração de treino}
 Adota-se o \textbf{YOLO11s} \citep{jocher2024} com pesos pré-treinados em COCO
-(\emph{transferência de aprendizado}) --- prática consolidada para imagem médica
+(\emph{transferência de aprendizado}), prática consolidada para imagem médica
 com dados escassos \citep{prinzi2024}. Por se tratar de poucas centenas de
 imagens, variantes grandes tendem ao \textit{overfitting}; a variante
 \textit{small} equilibra precisão e custo. A Tabela~\ref{tab:treino} resume os
 hiperparâmetros. O otimizador foi selecionado automaticamente pelo Ultralytics
 (\texttt{optimizer=auto}), resultando em AdamW com taxa de aprendizado inicial
-$\approx 0{,}0017$.
+$\approx 0{,}0017$. Com \emph{early stopping} (\texttt{patience}~=~25), o treino
+encerrou na época~82, com o melhor modelo observado na época~57.
 
 \begin{table}[t]
 \centering
@@ -312,14 +303,14 @@ $\approx 0{,}0017$.
 \midrule
 Modelo base                  & \texttt{yolo11s.pt} (pré-treinado em COCO) \\
 Resolução (\texttt{imgsz})   & 640 \\
-Épocas (máx.)                & 100 \\
+Épocas (máx.)                & 100 (parada antecipada na época 82) \\
 \textit{Early stopping} (\texttt{patience}) & 25 \\
 \textit{Batch}               & 16 \\
 Otimizador                   & \texttt{auto} $\rightarrow$ AdamW (\texttt{lr0}$\approx$0,0017) \\
 Aumento                      & rotação $\leq 10^\circ$; \textit{flip} horizontal ($p$=0,5); \\
                              & \textit{translate} 0,1; \textit{scale} 0,3; sem \textit{shear}/perspectiva \\
 Semente                      & 42 (fixa) \\
-\textit{Framework}           & Ultralytics \pend[versão]{}; PyTorch \pend[versão]{} \\
+\textit{Framework}           & Ultralytics 8.4.66; PyTorch 2.10.0 (CUDA) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -348,113 +339,155 @@ elevado. A especificidade clássica não é diretamente definível em detecção
 avaliada sobre as imagens normais.
 
 \paragraph{Por que a avaliação por classificação por imagem é inadequada.} Uma
-prática comum --- e que evitamos --- consiste em tomar, para cada imagem, a classe
+prática comum, e que evitamos, consiste em tomar, para cada imagem, a classe
 da \emph{primeira} caixa detectada como ``predição da imagem'' e gerar um
 \texttt{classification\_report}. Esse procedimento \emph{ignora a localização}
 (uma caixa com a classe certa, porém em posição errada, conta como acerto),
 descarta múltiplos objetos e não contabiliza corretamente FP/FN.
 
 \subsection{Reprodutibilidade}
-Toda operação aleatória usa semente fixa. O ambiente de execução e as versões dos
-pacotes são registrados pelo notebook
-(Ultralytics~\pend[versão]{}, PyTorch~\pend[versão]{}, Python~\pend[versão]{},
-GPU~Tesla~T4). Código, notebook e instruções estão no repositório público
+Toda operação aleatória usa semente fixa (42). O ambiente de execução foi
+Kaggle com GPU NVIDIA Tesla~T4, Ultralytics~8.4.66, PyTorch~2.10.0 e
+Python~3.12.13. Código, notebook e instruções estão no repositório público
 (Seção~\ref{sec:etica}).
 
 %==============================================================================
 \section{Resultados}\label{sec:resultados}
 
-\noindent\textbf{\textcolor{red}{Nota aos autores:} os valores em vermelho abaixo
-são placeholders, a preencher com \texttt{resultados\_experimentais.json} após o
-re-treino final (100 épocas). Remover esta nota antes de submeter.}
-
 \subsection{Composição dos conjuntos após deduplicação}
-\begin{table}[h]
+A Tabela~\ref{tab:splits} apresenta a composição dos conjuntos após a remoção da
+duplicata exata (779 imagens) e a divisão estratificada.
+
+\begin{table}[H]
 \centering
 \caption{Composição dos conjuntos após deduplicação e divisão estratificada
-(70/15/15).}
+(70/15/15). Imagens normais (sem lesão) entram como exemplos negativos.}
 \label{tab:splits}
 \begin{tabularx}{0.85\textwidth}{Xcccc}
 \toprule
 Conjunto & Benigno & Maligno & Normal & Total \\
 \midrule
-Treino     & \pend{} & \pend{} & \pend{} & \pend{} \\
-Validação  & \pend{} & \pend{} & \pend{} & \pend{} \\
-Teste      & \pend{} & \pend{} & \pend{} & \pend{} \\
+Treino     & 306 & 146 & 93 & 545 \\
+Validação  & 65  & 32  & 20 & 117 \\
+Teste      & 66  & 31  & 20 & 117 \\
 \midrule
-Total      & \pend{} & \pend{} & \pend{} & \pend{} \\
+Total      & 437 & 209 & 133 & 779 \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 \subsection{Métricas de detecção no conjunto de teste}
-\begin{table}[h]
+A Tabela~\ref{tab:resultados} apresenta as métricas no conjunto de teste cego. O
+modelo alcançou \textbf{mAP@50 de 0,709} e \textbf{mAP@50--95 de 0,438}. A classe
+benigna foi mais bem detectada (AP@50 0,785; revocação 0,772) do que a maligna
+(AP@50 0,633; revocação 0,516). A Figura~\ref{fig:pr} mostra as curvas
+\emph{precision--recall} por classe, e a Figura~\ref{fig:treino} a evolução das
+perdas e métricas ao longo do treino.
+
+\begin{table}[H]
 \centering
-\caption{Métricas de detecção no conjunto de teste cego (BUSI deduplicado).}
+\caption{Métricas de detecção no conjunto de teste cego (BUSI deduplicado),
+obtidas via \texttt{model.val()} com casamento por IoU.}
 \label{tab:resultados}
 \small
 \begin{tabular}{@{}lccccc@{}}
 \toprule
 \textbf{Classe} & \textbf{Precisão} & \textbf{Revocação} & \textbf{F1} & \textbf{AP@50} & \textbf{AP@50--95} \\
 \midrule
-Benigno & \pend{} & \pend{} & \pend{} & \pend{} & \pend{} \\
-Maligno & \pend{} & \pend{} & \pend{} & \pend{} & \pend{} \\
+Benigno & 0,666 & 0,772 & 0,715 & 0,785 & 0,530 \\
+Maligno & 0,618 & 0,516 & 0,562 & 0,633 & 0,347 \\
 \midrule
-\textbf{Global (m)} & \pend{} & \pend{} & \pend{} & \pend{} & \pend{} \\
+\textbf{Global (m)} & 0,642 & 0,644 & 0,639 & \textbf{0,709} & \textbf{0,438} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Falsos positivos em imagens normais}
-Das \pend[N]{} imagens normais do conjunto de teste, \pend[k]{}
-($\pend[p]{}\%$) geraram ao menos uma detecção espúria --- indicador da propensão
-a falsos positivos em casos sem lesão, relevante para triagem.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{assets/fig_pr_curve.png}
+\caption{Curva \emph{precision--recall} por classe no conjunto de teste
+(AP@50: benigno 0,785; maligno 0,633; média 0,709).}
+\label{fig:pr}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{assets/fig_treino.png}
+\caption{Evolução do treino (perdas de \textit{box}, classificação e DFL) e das
+métricas de validação (precisão, revocação, mAP@50 e mAP@50--95) ao longo das
+épocas. A parada antecipada ocorreu na época 82 (melhor modelo na época 57).}
+\label{fig:treino}
+\end{figure}
+
+\subsection{Falsos positivos e matriz de confusão}
+Das 20 imagens normais do conjunto de teste, 3 (15,0\%) geraram ao menos uma
+detecção espúria. A matriz de confusão normalizada (Figura~\ref{fig:cm}) detalha o
+comportamento por classe: cerca de 76\% das instâncias benignas e 55\% das
+malignas foram corretamente atribuídas. Observa-se que aproximadamente 26\% das
+lesões malignas foram rotuladas como benignas e uma parcela adicional não foi
+detectada (atribuída a fundo). A confusão maligno$\rightarrow$benigno é a de
+maior consequência clínica.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\textwidth]{assets/fig_cm.png}
+\caption{Matriz de confusão normalizada no conjunto de teste (classes benigno,
+maligno e \textit{background}). A coluna \textit{background} representa as
+detecções espúrias sobre regiões/imagens sem lesão.}
+\label{fig:cm}
+\end{figure}
 
 \subsection{Análise qualitativa}
-A Figura~\ref{fig:exemplos} ilustra detecções representativas no conjunto de teste
-(benigno, maligno e normal), e a matriz de confusão complementa a leitura dos
-FP/FN. \pend[Inserir as figuras \texttt{inference\_results/} e
-\texttt{confusion\_matrix.png} exportadas pelo notebook.]{}
+A Figura~\ref{fig:exemplos} ilustra detecções representativas no conjunto de
+teste: uma lesão benigna e uma maligna corretamente localizadas e rotuladas, e uma
+imagem normal sem detecção (resultado esperado para um exemplo negativo).
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
-\fbox{\parbox[c][4cm][c]{0.8\textwidth}{\centering \pend[Espaço reservado para a
-figura de exemplos de detecção e a matriz de confusão.]{}}}
-\caption{Exemplos qualitativos de detecção e matriz de confusão (a inserir após o
-re-treino).}
+\includegraphics[width=\textwidth]{assets/fig_exemplos.png}
+\caption{Exemplos qualitativos de detecção no conjunto de teste. (a) lesão benigna
+(confiança 0,80); (b) lesão maligna (confiança 0,84); (c) imagem normal, sem
+detecção. As caixas e os rótulos são gerados pelo modelo.}
 \label{fig:exemplos}
 \end{figure}
 
 %==============================================================================
 \section{Discussão}\label{sec:discussao}
 
-Os resultados devem ser interpretados contra a \emph{faixa realista} de detecção
+O modelo alcançou mAP@50 de 0,709 e mAP@50--95 de 0,438 no conjunto de teste cego.
+Esse desempenho deve ser interpretado contra a \emph{faixa realista} de detecção
 sobre o BUSI-\textit{only} e contra os trabalhos de YOLO em mama
 (Seção~\ref{sec:related}), e \emph{não} contra os índices de 94--99\% de
 \emph{classificação} (tarefa distinta) ou sobre conjuntos aumentados/combinados,
-que não são comparáveis. \pend[Discutir os valores reais obtidos.]{}
+que não são comparáveis. Trata-se de um resultado modesto, porém honesto: a
+deduplicação prévia e o teste cego eliminam parte da superestimação típica de
+\textit{pipelines} treinados e avaliados sobre o BUSI bruto.
 
-A análise por classe é essencial: em câncer de mama, uma revocação elevada na
-classe \emph{maligna} é mais crítica do que a média global, pois falsos-negativos
-têm consequências clínicas graves. \pend[Comentar a revocação obtida em maligno e
-o equilíbrio precisão/revocação; espera-se que a classe maligna seja a mais
-desafiadora, em parte pelo menor número de exemplos de treino.]{} O tratamento das
-imagens normais como negativos permite quantificar diretamente a propensão a
-falsos positivos --- ponto frágil em triagem, pois ganhos de sensibilidade
-acompanhados de excesso de alarmes implicam encaminhamentos e biópsias
-desnecessárias.
+A análise por classe confirma a expectativa: a classe benigna (AP@50 0,785;
+revocação 0,772) supera a maligna (AP@50 0,633; revocação 0,516). A menor
+revocação na classe \emph{maligna}, a mais crítica clinicamente, reflete o
+menor número de exemplos de treino (146 \textit{vs.} 306 benignos) e a maior
+heterogeneidade das lesões malignas. A matriz de confusão (Figura~\ref{fig:cm})
+mostra que cerca de 26\% das lesões malignas foram confundidas com benignas; essa
+confusão maligno$\rightarrow$benigno (falsa tranquilização) é o erro de maior
+consequência clínica e reforça que o sistema é uma prova de conceito, não uma
+ferramenta de triagem. A taxa de falsos positivos nas imagens normais (15\%)
+indica que a maioria dos casos sem lesão não gera alarme, embora a propensão a
+falsos positivos não seja desprezível, ponto relevante em triagem: ganhos
+de sensibilidade acompanhados de excesso de alarmes implicam encaminhamentos e
+biópsias desnecessárias.
 
-Por fim, parte do desempenho --- e de sua eventual fragilidade --- decorre da
-\textbf{qualidade do conjunto}. Pipelines que treinam e avaliam sobre o BUSI bruto
-tendem a métricas mais altas, porém contaminadas por vazamento; números mais
-modestos, porém honestos, são preferíveis para uma avaliação comparável.
+Em síntese, os resultados sustentam a \emph{viabilidade} da abordagem de detecção
+como prova de conceito, ao mesmo tempo em que evidenciam, com transparência, suas
+fragilidades, sobretudo a sensibilidade ainda limitada na classe maligna, o
+que é preferível a índices elevados, porém contaminados por vazamento.
 
 %==============================================================================
 \section{Limitações}\label{sec:limitacoes}
 
 \begin{itemize}[topsep=2pt]
-  \item \textbf{Redundância residual do conjunto.} A deduplicação exata remove
-  apenas imagens \emph{idênticas}; \emph{near-duplicates} documentados no BUSI
+  \item \textbf{Redundância residual do conjunto.} A deduplicação exata removeu
+  apenas 1 imagem \emph{idêntica}; \emph{near-duplicates} documentados no BUSI
   podem persistir, e a ausência de IDs de paciente impede a divisão por paciente.
   \item \textbf{Defeitos do conjunto.} Permanecem imagens com marcadores, texto,
   Doppler e estruturas não mamárias \citep{pawlowska2023,pawlowska2024}, não
@@ -462,8 +495,11 @@ modestos, porém honestos, são preferíveis para uma avaliação comparável.
   \item \textbf{Origem monocêntrica e tamanho reduzido.} Fonte única e poucas
   centenas de imagens limitam a generalização; uma única partição
   treino/teste apresenta variância alta, recomendando validação cruzada.
+  \item \textbf{Sensibilidade limitada em maligno.} A revocação de 0,516 na classe
+  maligna é insuficiente para qualquer pretensão clínica e indica necessidade de
+  mais dados e de tratamento do desbalanceamento.
   \item \textbf{Sem validação externa.} Não se avaliou a transferência para
-  outros equipamentos/populações (p.~ex., o conjunto curado BrEaST
+  outros equipamentos/populações (por exemplo, o conjunto curado BrEaST
   \citep{pawlowska2024}).
   \item \textbf{Escopo não clínico.} O trabalho não constitui validação clínica
   nem evidência de utilidade diagnóstica; não é um dispositivo médico.
@@ -476,33 +512,35 @@ Apresentou-se um \emph{pipeline} reprodutível para detecção e classificação
 lesões mamárias em ultrassonografia com YOLO11s, enfatizando o rigor
 metodológico: conversão de máscaras em caixas, tratamento das imagens normais como
 negativos, mitigação e discussão do vazamento de dados do BUSI e, sobretudo, um
-protocolo de avaliação \emph{adequado a detectores}. \pend[Resumir a conclusão à
-luz dos resultados reais.]{} Mais do que perseguir índices máximos, busca-se uma
-avaliação \emph{honesta} e comparável --- condição necessária para que ferramentas
-de CAD sejam úteis na prática.
+protocolo de avaliação \emph{adequado a detectores}. O modelo alcançou mAP@50 de
+0,709 no conjunto de teste cego, demonstrando a viabilidade da abordagem como
+prova de conceito, com desempenho honesto e comparável, ressalvadas as limitações
+de dados e a sensibilidade ainda limitada na classe maligna. Mais do que perseguir
+índices máximos, busca-se uma avaliação \emph{honesta} e comparável, condição
+necessária para que ferramentas de CAD sejam úteis na prática.
 
 Como direções futuras: (i) validação cruzada $k$-fold (com pré-processamento
-dentro de cada \textit{fold}) para reduzir a variância; (ii) deduplicação
-perceptual e uso de versões curadas do BUSI, além de validação externa em
-conjuntos independentes; (iii) tratamento do desbalanceamento entre classes para
-melhorar a revocação em maligno; (iv) comparação entre variantes do YOLO
-(n/s/m) e contra uma linha de base de classificação; e (v) avaliação de versões
-com inferência sem NMS \citep{ultralytics2026}.
+dentro de cada \textit{fold}) para reduzir a variância das estimativas; (ii)
+deduplicação perceptual e uso de versões curadas do BUSI, além de validação
+externa em conjuntos independentes; (iii) tratamento do desbalanceamento entre
+classes para melhorar a revocação em maligno; (iv) comparação entre variantes do
+YOLO (n/s/m) e contra uma linha de base de classificação; e (v) avaliação de
+versões com inferência sem NMS \citep{ultralytics2026}.
 
 %==============================================================================
-\section{Aviso e Enquadramento Ético}\label{sec:etica}
+\section{Considerações Éticas e Regulatórias}\label{sec:etica}
 
-\textbf{Este software é uma ferramenta de pesquisa acadêmica / prova de conceito.
-NÃO é um dispositivo médico aprovado (FDA/ANVISA), não constitui diagnóstico e não
-deve guiar conduta clínica.} A saída do modelo (benigno ou maligno, com grau de
-confiança) deve ser comunicada como ``achado sugestivo de'', em referência ao
-léxico BI-RADS, e sempre sujeita à avaliação de profissional habilitado. Sob a
-FDA (EUA), software que analisa imagem médica de ultrassom recai na categoria de
-dispositivo; no Brasil, a RDC nº~657/2022 da ANVISA regula \textit{software as a
-medical device} por risco --- protótipos de pesquisa, não comercializados e sem uso
-em decisão clínica, não são registráveis. Evidências de IA em rastreamento
-mamário (p.~ex., o ensaio MASAI \citep{lang2023}) reforçam o papel da IA como
-\emph{segundo leitor} de apoio, não como substituto.
+Este trabalho é uma prova de conceito de pesquisa e não constitui um dispositivo
+médico, diagnóstico ou recomendação de conduta clínica. A saída do modelo (benigno
+ou maligno, com grau de confiança) deve ser entendida como achado sugestivo, em
+referência ao léxico BI-RADS, e está sempre sujeita à avaliação de profissional
+habilitado. Do ponto de vista regulatório, software que analisa imagem médica de
+ultrassom recai na categoria de dispositivo sob a FDA (EUA); no Brasil, a RDC
+nº~657/2022 da ANVISA regula \textit{software as a medical device} por classe de
+risco, e protótipos de pesquisa não comercializados e sem uso em decisão clínica
+não são registráveis. Evidências recentes de IA em rastreamento mamário, como o
+ensaio MASAI \citep{lang2023}, posicionam a IA como segundo leitor de apoio, e não
+como substituto do radiologista.
 
 \subsection*{Disponibilidade de dados e código}
 O conjunto BUSI é público \citep{aldhabyani2020}. Código, notebook de
@@ -512,17 +550,18 @@ resultados (\texttt{resultados\_experimentais.json}, figuras e tabelas) são
 gerados pelo notebook.
 
 \subsection*{Contribuições dos autores (CRediT)}
-\pend[Revisar conforme a realidade do trabalho.]{}
-\textbf{J. J. Gouvêa Cardenas:} concepção, metodologia, \textit{software},
-experimentação, redação. \textbf{F. Ramirez Pereira Botero:} metodologia,
-validação, análise, revisão e edição.
+Ambos os autores contribuíram igualmente para a concepção do estudo e a redação do
+manuscrito. \textbf{F. Ramirez Pereira Botero:} ideação original, metodologia,
+validação, análise formal, revisão e edição. \textbf{J. J. Gouvêa Cardenas:}
+metodologia, \textit{software}, investigação experimental, curadoria de dados e
+visualização.
 
 \subsection*{Conflitos de interesse}
 Os autores declaram não haver conflitos de interesse.
 
 \subsection*{Financiamento}
-\pend[Declarar financiamento ou ``Os autores não receberam financiamento
-específico para este trabalho''.]{}
+Os autores não receberam financiamento específico para a realização deste
+trabalho.
 
 %==============================================================================
 \renewcommand{\refname}{Referências}
