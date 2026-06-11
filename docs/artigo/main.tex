@@ -1,0 +1,579 @@
+% =====================================================================
+%  Detecção e Classificação de Lesões Mamárias em Ultrassonografia
+%  com Visão Computacional (YOLO)
+%
+%  Autores: Juan José Gouvêa Cardenas; Felipe Ramirez Pereira Botero
+%
+%  Compilação (qualquer distribuição TeX, ou Overleaf):
+%      pdflatex main.tex && pdflatex main.tex
+%  Não requer .bib externo nem pacotes fora do TeX Live padrão.
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[authoryear,round]{natbib}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+
+% Marca visível para valores que dependem do re-treino (remover ao preencher).
+\newcommand{\preencher}[1]{\textbf{\textcolor{red}{[#1]}}}
+
+\setlength{\parindent}{1.25em}
+\setlength{\parskip}{0.35em}
+
+\title{\textbf{Detecção e Classificação de Lesões Mamárias em\\
+Ultrassonografia com Visão Computacional (YOLO)}\\[0.3em]
+\large Um estudo de prova de conceito para auxílio ao diagnóstico (CAD)}
+
+\author{
+  Juan José Gouvêa Cardenas \and Felipe Ramirez Pereira Botero
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% ---------------------------------------------------------------------
+\begin{abstract}
+\noindent\textbf{Resumo.} O câncer de mama é a neoplasia mais incidente entre
+mulheres no Brasil, e o diagnóstico tardio --- agravado pela escassez de
+equipamentos e de radiologistas na rede pública --- contribui para a
+mortalidade. Sistemas de auxílio ao diagnóstico (\textit{Computer-Aided
+Diagnosis}, CAD) por visão computacional surgem como ferramenta de apoio,
+sobretudo na ultrassonografia, modalidade complementar relevante em mamas
+densas. Este trabalho investiga o uso de detectores de objetos da família YOLO
+para \emph{localizar e classificar} lesões mamárias benignas e malignas em
+imagens de ultrassom, utilizando o conjunto público BUSI (\textit{Breast
+Ultrasound Images}). As máscaras de segmentação do BUSI são convertidas em
+caixas delimitadoras (\textit{bounding boxes}); o modelo YOLO11 é ajustado por
+transferência de aprendizado, e as imagens normais são tratadas como exemplos
+negativos (fundo). Diferentemente de abordagens que avaliam detecção como se
+fosse classificação por imagem, adotamos um protocolo de avaliação adequado a
+detectores --- casamento por IoU e métricas por classe (mAP@50, mAP@50--95,
+precisão, revocação e F1) obtidas via \texttt{model.val()} do Ultralytics ---,
+além de mitigar o vazamento de dados documentado no BUSI por meio de
+deduplicação prévia à divisão dos dados. Posiciona-se este sistema
+explicitamente como prova de conceito de pesquisa, \emph{não} como dispositivo
+médico.
+
+\medskip
+\noindent\textbf{Palavras-chave:} visão computacional; redes neurais
+convolucionais; YOLO; ultrassonografia mamária; detecção de objetos; auxílio
+ao diagnóstico (CAD).
+\end{abstract}
+
+\begin{quote}\small
+\textbf{Abstract.} Breast cancer is the most frequent malignancy among women in
+Brazil, and late diagnosis---worsened by the shortage of imaging equipment and
+radiologists in the public health system---contributes to mortality.
+Computer-Aided Diagnosis (CAD) systems based on computer vision are a promising
+support tool, particularly in ultrasonography, a relevant complementary modality
+for dense breasts. This work investigates YOLO-family object detectors to
+\emph{localize and classify} benign and malignant breast lesions in ultrasound
+images, using the public BUSI (Breast Ultrasound Images) dataset. Segmentation
+masks are converted into bounding boxes; a YOLO11 model is fine-tuned via
+transfer learning, and normal images are treated as background negatives. Unlike
+approaches that evaluate detection as if it were per-image classification, we
+adopt a detection-appropriate protocol---IoU matching and per-class metrics
+(mAP@50, mAP@50--95, precision, recall, F1) via Ultralytics
+\texttt{model.val()}---and mitigate the documented BUSI data leakage by
+deduplicating before splitting. The system is explicitly positioned as a
+research proof of concept, \emph{not} a medical device.
+
+\noindent\textbf{Keywords:} computer vision; convolutional neural networks;
+YOLO; breast ultrasound; object detection; computer-aided diagnosis.
+\end{quote}
+
+% ---------------------------------------------------------------------
+\section{Introdução}
+
+O câncer de mama é o tipo de câncer mais incidente entre mulheres no Brasil
+(excetuando-se os de pele não melanoma). Para o triênio 2023--2025, o Instituto
+Nacional de Câncer (INCA) estimou cerca de 73.610 casos novos por ano, com
+taxa bruta de aproximadamente 66,54 casos por 100 mil mulheres
+\citep{inca2023}. A doença é também a principal causa de morte oncológica
+feminina no país: foram registrados mais de 20 mil óbitos por câncer de mama em
+mulheres em 2023 \citep{inca2024}.
+
+O \emph{diagnóstico precoce} é determinante para o prognóstico, mas o acesso
+oportuno permanece desigual. Estudos brasileiros relatam mediana de cerca de 70
+dias entre a suspeita e o diagnóstico, com tempos maiores no Sistema Único de
+Saúde (SUS) do que na rede privada \citep{campos2022}. Esse cenário é agravado
+pela distribuição irregular de mamógrafos e pela escassez de radiologistas,
+limitando a triagem por imagem em larga escala \citep{inca2024}.
+
+Nesse contexto, a \emph{visão computacional} oferece ferramentas de apoio à
+leitura de exames. Em particular, a \emph{ultrassonografia} é uma modalidade
+complementar importante: em mamas densas, a sensibilidade da mamografia isolada
+é reduzida, e a combinação com ultrassom aumenta a taxa de detecção
+\citep{lang2023}. Detectores de objetos da família YOLO (\textit{You Only Look
+Once}), introduzidos por \citet{redmon2016}, destacam-se pela inferência em uma
+única passagem, conciliando precisão e velocidade --- propriedades atraentes
+para sistemas de apoio.
+
+É essencial, porém, delimitar o escopo com rigor. Um modelo de imagem
+\emph{não diagnostica câncer}: ele localiza uma lesão (uma caixa delimitadora) e
+lhe atribui um rótulo de aparência (benigna ou maligna) com um grau de
+confiança. O diagnóstico definitivo exige correlação clínica e confirmação
+histopatológica (biópsia). Portanto, este trabalho posiciona-se como um sistema
+de \emph{detecção e classificação} de lesões e de \emph{auxílio ao diagnóstico}
+(CAD), cujas saídas devem ser interpretadas como ``sugestivas de'', em
+referência ao léxico BI-RADS, e nunca como veredito clínico (Seção~\ref{sec:etica}).
+O sistema BI-RADS, ao padronizar laudos, contribui para reduzir a variabilidade
+interobservador na leitura de exames mamários \citep{pires2004}.
+
+\paragraph{Objetivo.} Desenvolver e avaliar, de forma metodologicamente
+rigorosa, um detector YOLO para localização e classificação de lesões mamárias
+benignas e malignas em ultrassonografia, sobre o conjunto público BUSI.
+
+\paragraph{Contribuições.} (i) um \emph{pipeline} reprodutível de conversão de
+máscaras de segmentação em rótulos de detecção; (ii) o tratamento das imagens
+normais como exemplos negativos (fundo), permitindo quantificar falsos
+positivos; (iii) um protocolo de avaliação \emph{adequado a detectores}
+(casamento por IoU e métricas por classe via \texttt{model.val()}), em
+substituição à prática inadequada de avaliar a detecção como classificação por
+imagem; e (iv) a mitigação explícita do vazamento de dados documentado no BUSI
+por deduplicação prévia à divisão.
+
+% ---------------------------------------------------------------------
+\section{Trabalhos Relacionados}
+\label{sec:related}
+
+A aplicação de aprendizado profundo ao CAD de mama está consolidada na
+\textbf{mamografia}. No Brasil, \citet{wurzel2022} alcançaram acurácia de
+aproximadamente 91,3\% na classificação de células de mamografia
+(CBIS-DDSM) com uma rede convolucional do tipo VGG, sem detecção por caixas
+delimitadoras. Internacionalmente, a família YOLO já foi aplicada à detecção e
+classificação de lesões mamográficas com bons resultados:
+\citet{anas2024} combinaram um YOLOv5 aprimorado com Mask R-CNN, reportando
+coeficiente de correlação de Matthews (MCC) de 92\% e acurácia de até
+98\% no INbreast; \citet{prinzi2024} demonstraram que um YOLOv5s com
+transferência de aprendizado (CBIS-DDSM~$\rightarrow$~INbreast) atinge
+mAP $\approx 0{,}835$ (validação 5-fold) e que explicações via Eigen-CAM
+auxiliam a reduzir falsos negativos; e \citet{mohammed2024} propuseram um YOLO
+multiescala com mAP@50 de 91,15\%, evidenciando o pré-processamento por
+CLAHE como benéfico.
+
+Em \textbf{ultrassonografia} --- modalidade complementar crucial em mamas
+densas ---, a literatura específica de detecção é mais escassa e recente.
+Trabalhos com YOLOv8/YOLO11 reportam desempenhos fortes em segmentação e
+detecção, frequentemente combinando o BUSI com outros conjuntos ou aplicando
+pré-processamento por CLAHE. Contudo, parte expressiva dos resultados
+``de 99\%'' refere-se a \emph{classificação} sobre o BUSI \emph{aumentado}, com
+vazamento de dados conhecido \citep{pawlowska2023}, ao passo que a
+\emph{detecção pura} sobre o BUSI original permanece desafiadora.
+Adicionalmente, é comum encontrar avaliações que tratam a detecção como
+classificação por imagem (tomando apenas a primeira caixa predita), o que ignora
+a qualidade da localização. Nosso trabalho situa-se na interseção dessas
+lacunas: \emph{ultrassom} (não mamografia), uma versão recente e estável do YOLO
+(YOLO11), avaliação \emph{de detecção} com casamento por IoU e métricas por
+classe, e mitigação do vazamento de dados do BUSI.
+
+\begin{table}[t]
+\centering
+\caption{Referências de detecção/classificação por aprendizado profundo em
+imagem de mama. Note-se a diferença de \emph{modalidade} (mamografia
+\textit{vs.} ultrassom) e de \emph{tarefa} (detecção \textit{vs.}
+classificação); resultados sobre conjuntos aumentados ou combinados não são
+diretamente comparáveis a um \textit{split} BUSI-\textit{only} deduplicado.}
+\label{tab:related}
+\small
+\begin{tabularx}{\linewidth}{@{}l l l X@{}}
+\toprule
+\textbf{Trabalho} & \textbf{Modalidade} & \textbf{Tarefa} & \textbf{Resultado-chave reportado} \\
+\midrule
+\citet{wurzel2022}   & Mamografia (CBIS-DDSM) & Classificação & Acurácia $\approx 91{,}3\%$ (CNN-VGG) \\
+\citet{anas2024}     & Mamografia (INbreast)  & Det.+Class.   & MCC $92\%$; acurácia até $98\%$ \\
+\citet{prinzi2024}   & Mamografia (INbreast)  & Detecção      & mAP $0{,}835\pm0{,}098$ (5-fold, +TL) \\
+\citet{mohammed2024} & Mamografia (CBIS-DDSM) & Detecção      & mAP@50 $91{,}15\%$ (+CLAHE) \\
+\citet{jabeen2022}   & Ultrassom (BUSI aum.)  & Classificação & Acurácia $99{,}18\%$ \emph{(aumentado)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------------
+\section{Materiais e Métodos}
+\label{sec:metodos}
+
+\subsection{Conjunto de dados: BUSI}
+
+Utiliza-se o \textit{Breast Ultrasound Images Dataset} (BUSI), publicado por
+\citet{aldhabyani2020}\footnote{O conjunto foi disponibilizado em \textit{Data
+in Brief}, v.~28, art.~104863, fev.~2020 (recebido/\textit{online} em nov.~2019).
+Adota-se aqui \textbf{2020} como ano de referência.}. O BUSI reúne 780 imagens
+de ultrassom de mama, em formato PNG e resolução média próxima de
+$500\times500$ \textit{px}, coletadas em 2018 de 600 pacientes do sexo feminino
+(25--75 anos) em um único centro (Baheya Hospital, Cairo, Egito), com
+equipamento LOGIQ E9. As imagens distribuem-se em três classes ---
+\textit{normal}, \textit{benigna} e \textit{maligna} --- e acompanham
+\emph{máscaras de segmentação} de referência para os casos com lesão, recurso
+raro entre bases públicas de ultrassom mamário e que viabiliza a tarefa de
+detecção. Na cópia distribuída (Kaggle), a contagem é de 437 imagens benignas,
+210 malignas e 133 normais (totalizando 780); registra-se que o artigo original
+menciona 487 benignas, divergência atribuível à curadoria da distribuição.
+
+\paragraph{Qualidade dos dados e vazamento.} O BUSI possui defeitos
+documentados. \citet{pawlowska2023} reportam cerca de 155 imagens duplicadas
+($\approx$19\%), além de imagens contendo marcadores de medição, texto, Doppler
+colorido e até estruturas não mamárias. Análises subsequentes indicam que
+\emph{mais de 40\%} das imagens apresentam algum problema significativo
+\citep{pawlowska2024}, e demonstram que duplicatas distribuídas entre treino e
+validação produzem \emph{vazamento de dados} (\textit{data leakage}), inflando
+métricas. Como o BUSI \emph{não} fornece identificadores de paciente, é
+impossível garantir divisão por paciente. Adotam-se, portanto, duas mitigações:
+(i) \textbf{deduplicação} por \textit{hash} de conteúdo antes de qualquer
+divisão, e (ii) declaração explícita, na Seção~\ref{sec:limitacoes}, do caráter
+\emph{single-center} e da ausência de \textit{split} por paciente.
+
+\subsection{Geração de rótulos de detecção}
+
+Para cada imagem com lesão, a máscara de segmentação binária é convertida em uma
+caixa delimitadora: localizam-se os \textit{pixels} não nulos, calcula-se o
+retângulo envolvente $(x,y,w,h)$ e normalizam-se as coordenadas para o formato
+YOLO,
+\[
+x_c=\frac{x+w/2}{W},\quad y_c=\frac{y+h/2}{H},\quad
+w_n=\frac{w}{W},\quad h_n=\frac{h}{H},
+\]
+onde $W$ e $H$ são as dimensões da imagem. São definidas duas classes de
+detecção: \textbf{0 = benigno} e \textbf{1 = maligno}. As imagens
+\emph{normais} não recebem caixas: tornam-se \emph{exemplos negativos} (fundo),
+para os quais a saída esperada é a ausência de detecção.
+
+\subsection{Divisão dos dados e aumento}
+
+Após a deduplicação, os dados são divididos de forma \emph{estratificada por
+classe} em treino, validação e teste (proporção sugerida 70/15/15), com semente
+fixa para reprodutibilidade. As imagens normais são incluídas em todos os
+subconjuntos como negativos, o que permite \emph{medir a taxa de falsos
+positivos} (Seção~\ref{sec:aval}). O aumento de dados (\textit{data
+augmentation}) é aplicado \emph{apenas ao treino} e \emph{em tempo de execução}
+(nunca antes da divisão, para evitar vazamento). Adota-se aumento
+\emph{conservador}, coerente com evidências em ultrassom mamário, nas quais
+rotações leves trazem ganho consistente, enquanto transformações elásticas
+\emph{degradam} o desempenho por distorcerem a anatomia: habilitam-se rotações
+($\leq 10^\circ$), espelhamentos e pequenos deslocamentos/escala, evitando
+distorções geométricas agressivas.
+
+\subsection{Arquitetura}
+
+Adota-se o \textbf{YOLO11} \citep{jocher2024}, versão estável recomendada para
+produção pela mantenedora (Ultralytics) à época deste trabalho. Em relação a
+gerações anteriores, o YOLO11 introduz os blocos \textit{C3k2} (em substituição
+ao \textit{C2f}) e \textit{C2PSA} (atenção espacial após o \textit{SPPF}),
+mantendo o módulo \textit{SPPF} \citep{khanam2024}. Optou-se deliberadamente por
+\emph{não} adotar o YOLOv12 \citep{tian2025} como linha de base, dada a relatada
+instabilidade de treino e maior consumo de memória em conjuntos pequenos.
+
+\paragraph{Escolha da variante.} Por se tratar de um conjunto de poucas centenas
+de imagens, variantes grandes (\textit{l}/\textit{x}) tendem ao
+\textit{overfitting}. Seleciona-se a variante \textbf{YOLO11s} (\textit{small})
+como modelo principal, equilibrando precisão e custo, partindo sempre de pesos
+pré-treinados em COCO (\emph{transferência de aprendizado}) --- prática
+consolidada para imagem médica com dados escassos, com ganho de desempenho
+documentado em mamografia \citep{prinzi2024}. Recomenda-se reportar, quando
+viável, a comparação entre as variantes \textit{n}/\textit{s}/\textit{m}.
+
+\subsection{Configuração de treino}
+
+A Tabela~\ref{tab:treino} resume os hiperparâmetros adotados. Em relação a
+configurações iniciais mais agressivas, eleva-se a paciência do \emph{early
+stopping} (de 5 para $\sim$25 épocas), evitando o corte prematuro antes da
+convergência, e amplia-se o teto de épocas para que o critério de parada atue de
+fato.
+
+\begin{table}[t]
+\centering
+\caption{Hiperparâmetros de treino (Kaggle, GPU NVIDIA T4).}
+\label{tab:treino}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parâmetro} & \textbf{Valor} \\
+\midrule
+Modelo base            & \texttt{yolo11s.pt} (pré-treinado em COCO) \\
+Resolução (\texttt{imgsz}) & 640 \\
+Épocas (máx.)          & 100--150 \\
+\textit{Early stopping} (\texttt{patience}) & 20--30 \\
+\textit{Batch}         & 16 \\
+Otimizador             & \texttt{auto} (ou AdamW, \texttt{lr0}$\approx$0,001) \\
+Aumento                & conservador (rotação $\leq 10^\circ$, \textit{flip}, \textit{shift/scale}) \\
+Semente                & fixa (reportada) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Protocolo de avaliação}
+\label{sec:aval}
+
+A detecção é avaliada com \emph{casamento por IoU} entre caixas preditas e de
+referência: uma predição é verdadeiro-positivo (VP) quando sua sobreposição
+(\textit{Intersection over Union}) com a verdade excede um limiar
+(tipicamente 0,5); caixas excedentes ou mal localizadas são falsos-positivos
+(FP) e lesões não detectadas são falsos-negativos (FN). A avaliação é conduzida
+por \texttt{model.val()} (Ultralytics), reportando-se:
+
+\begin{itemize}[noitemsep,topsep=2pt]
+  \item \textbf{Globais:} mAP@50 e mAP@50--95 (média sobre IoU de 0,50 a 0,95),
+        além de precisão e revocação médias;
+  \item \textbf{Por classe} (obrigatório, dado o desbalanceamento): precisão,
+        revocação, AP@50, AP@50--95 e $F1 = 2PR/(P+R)$ para benigno e maligno;
+  \item \textbf{Matriz de confusão} (incluindo a categoria \textit{background})
+        para inspecionar FP/FN;
+  \item \textbf{Taxa de falsos positivos nas imagens normais}, medindo quantos
+        negativos geram detecção espúria.
+\end{itemize}
+
+A revocação equivale à \emph{sensibilidade} (VP/(VP+FN)) e deve ser priorizada
+na triagem oncológica, em que o custo de um falso-negativo é elevado.
+Ressalta-se que a especificidade clássica não é diretamente definível em
+detecção (não há ``verdadeiro-negativo'' bem definido por caixa); por isso, a
+robustez a falsos positivos é avaliada sobre as imagens normais.
+
+\paragraph{Por que a avaliação por classificação por imagem é inadequada.}
+Uma prática comum --- e que evitamos --- consiste em, para cada imagem, tomar a
+classe da \emph{primeira} caixa detectada como ``predição da imagem'' e compará-la
+ao rótulo, gerando um \texttt{classification\_report}. Esse procedimento
+\emph{ignora a localização} (uma caixa com a classe certa, porém em posição
+errada, é contada como acerto), descarta múltiplos objetos e não contabiliza
+corretamente FP/FN. Por isso, adota-se exclusivamente a avaliação de detecção
+descrita acima.
+
+% ---------------------------------------------------------------------
+\section{Resultados}
+\label{sec:resultados}
+
+\textit{Os valores numéricos abaixo serão preenchidos a partir da saída de
+\texttt{model.val()} após o re-treino com o protocolo da Seção~\ref{sec:aval}
+(conjunto de teste cego e BUSI deduplicado). Marcadores em vermelho indicam
+campos a completar.}
+
+A Tabela~\ref{tab:resultados} apresenta as métricas de detecção por classe e
+globais. A Figura de matriz de confusão e a curva de \textit{precision--recall}
+geradas pelo Ultralytics (\texttt{runs/detect/.../}) devem ser inseridas como
+\texttt{results.png} e \texttt{confusion\_matrix.png}.
+
+\begin{table}[h]
+\centering
+\caption{Métricas de detecção no conjunto de teste (BUSI deduplicado).}
+\label{tab:resultados}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Classe} & \textbf{Precisão} & \textbf{Revocação} & \textbf{F1} & \textbf{AP@50} & \textbf{AP@50--95} \\
+\midrule
+Benigno & \preencher{P} & \preencher{R} & \preencher{F1} & \preencher{AP50} & \preencher{AP50-95} \\
+Maligno & \preencher{P} & \preencher{R} & \preencher{F1} & \preencher{AP50} & \preencher{AP50-95} \\
+\midrule
+\textbf{Global (mAP)} & \preencher{mP} & \preencher{mR} & \preencher{mF1} & \preencher{mAP50} & \preencher{mAP50-95} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Taxa de falsos positivos sobre as $N$ imagens normais:
+\preencher{FP/N} detecções espúrias (\preencher{x}\%).
+
+% ---------------------------------------------------------------------
+\section{Discussão}
+
+Os resultados devem ser interpretados contra a \emph{faixa realista} de detecção
+sobre o BUSI-\textit{only} e contra os trabalhos de YOLO em mama
+(Seção~\ref{sec:related}), e \emph{não} contra os índices de 94--99\% de
+\emph{classificação} (tarefa distinta) ou contra números obtidos sobre conjuntos
+aumentados/combinados, que não são comparáveis. A análise por classe é essencial:
+em câncer de mama, uma revocação elevada na classe \emph{maligna} é mais crítica
+do que a média global, pois falsos-negativos têm consequências clínicas graves
+--- daí a necessidade de reportar métricas desagregadas, e não apenas a média.
+
+O tratamento das imagens normais como negativos permite quantificar diretamente
+a propensão a falsos positivos, ponto frágil em sistemas de triagem: ganhos de
+sensibilidade que venham acompanhados de excesso de alarmes implicam mais
+encaminhamentos e biópsias desnecessárias.
+
+% ---------------------------------------------------------------------
+\section{Limitações}
+\label{sec:limitacoes}
+
+(i) O BUSI é \emph{single-center} e não contém identificadores de paciente, o que
+impede o \textit{split} por paciente e limita a generalização; (ii) mesmo após
+deduplicação, podem persistir imagens correlacionadas do mesmo exame; (iii) o
+rótulo ``maligno'' deriva de correlação clínica/biópsia, não da imagem isolada;
+(iv) o conjunto é relativamente pequeno, o que recomenda validação cruzada e
+cautela na extrapolação dos resultados. Como direções futuras, destacam-se:
+validação cruzada estratificada $k$-fold (com pré-processamento dentro de cada
+\textit{fold}); validação externa em um conjunto independente, como o BrEaST
+\citep{pawlowska2024}; o estudo do pré-processamento por CLAHE como ablação; e a
+comparação com versões mais recentes do YOLO (p.~ex., YOLO26, com inferência
+sem NMS) \citep{ultralytics2026}.
+
+% ---------------------------------------------------------------------
+\section{Considerações Finais}
+
+Este trabalho apresentou um \emph{pipeline} reprodutível para detecção e
+classificação de lesões mamárias em ultrassonografia com YOLO11, enfatizando o
+rigor metodológico: conversão de máscaras em caixas, tratamento das imagens
+normais como negativos, mitigação do vazamento de dados do BUSI e, sobretudo, um
+protocolo de avaliação \emph{adequado a detectores}. Mais do que perseguir
+índices máximos, busca-se uma avaliação \emph{honesta} e comparável, condição
+necessária para que ferramentas de CAD sejam úteis na prática. Reitera-se que o
+sistema é uma prova de conceito de pesquisa, concebida como \emph{apoio} ao
+radiologista, jamais como substituto.
+
+% ---------------------------------------------------------------------
+\section{Aviso e Enquadramento Ético}
+\label{sec:etica}
+
+\textbf{Este software é uma ferramenta de pesquisa acadêmica / prova de
+conceito. NÃO é um dispositivo médico aprovado (FDA/ANVISA), não constitui
+diagnóstico e não deve guiar conduta clínica.} A saída do modelo (benigno ou
+maligno, com grau de confiança) deve ser comunicada como ``achado sugestivo
+de'', em referência ao léxico BI-RADS do American College of Radiology, e
+sempre sujeita à avaliação de um profissional habilitado. Sob a regulação da
+FDA (EUA), software que analisa imagem médica de ultrassom recai na categoria de
+dispositivo; no Brasil, a RDC nº~657/2022 da ANVISA regula \textit{software as a
+medical device} por risco --- protótipos de pesquisa, não comercializados e sem
+uso em decisão clínica, não são registráveis. Evidências recentes de IA em
+rastreamento mamário (p.~ex., o ensaio clínico MASAI, em mamografia
+\citep{lang2023}) reforçam o papel da IA como \emph{segundo leitor} de apoio,
+e não como substituto do radiologista.
+
+\paragraph{Disponibilidade.} O código, o \textit{notebook} de treinamento e a
+demonstração interativa estão disponíveis no repositório do projeto.
+O conjunto BUSI é público \citep{aldhabyani2020}.
+
+% ---------------------------------------------------------------------
+\renewcommand{\refname}{Referências}
+\begin{thebibliography}{Mohammed e Ekmekci(2024)}
+\small
+
+\bibitem[Al-Dhabyani et al.(2020)]{aldhabyani2020}
+AL-DHABYANI, W.; GOMAA, M.; KHALED, H.; FAHMY, A.
+\textbf{Dataset of breast ultrasound images}.
+Data in Brief, v.~28, art.~104863, fev.~2020.
+DOI: 10.1016/j.dib.2019.104863.
+
+\bibitem[Anas et al.(2024)]{anas2024}
+ANAS, M.; HAQ, I. U.; HUSNAIN, G.; JAFFERY, S. A. F.
+\textbf{Advancing breast cancer detection: enhancing YOLOv5 network for accurate
+classification in mammogram images}.
+IEEE Access, v.~12, p.~16474--16488, 2024.
+DOI: 10.1109/ACCESS.2024.3358686.
+
+\bibitem[Campos et al.(2022)]{campos2022}
+CAMPOS, A. A. L. \textit{et al.}
+\textbf{Time to diagnosis and treatment for breast cancer in public and private
+health services}.
+Revista Gaúcha de Enfermagem, v.~43, e20210103, 2022.
+DOI: 10.1590/1983-1447.2022.20210103.en.
+
+\bibitem[INCA(2023)]{inca2023}
+INSTITUTO NACIONAL DE CÂNCER (INCA).
+\textbf{Estimativa 2023: incidência de câncer no Brasil}.
+Rio de Janeiro: INCA, 2022. Disponível em:
+\url{https://www.inca.gov.br/publicacoes/livros/estimativa-2023-incidencia-de-cancer-no-brasil}.
+Acesso em: 11 jun. 2026.
+
+\bibitem[INCA(2024)]{inca2024}
+INSTITUTO NACIONAL DE CÂNCER (INCA).
+\textbf{Controle do câncer de mama no Brasil: dados e números 2024}.
+Rio de Janeiro: INCA, 2024. Disponível em: \url{https://www.inca.gov.br/mama}.
+Acesso em: 11 jun. 2026.
+
+\bibitem[Jabeen et al.(2022)]{jabeen2022}
+JABEEN, K. \textit{et al.}
+\textbf{Breast cancer classification from ultrasound images using
+probability-based optimal deep learning feature fusion}.
+Sensors, v.~22, n.~3, art.~807, 2022.
+DOI: 10.3390/s22030807.
+
+\bibitem[Jocher e Qiu(2024)]{jocher2024}
+JOCHER, G.; QIU, J.
+\textbf{Ultralytics YOLO11}. Software, versão 11.0.0, 2024.
+Disponível em: \url{https://github.com/ultralytics/ultralytics}.
+Acesso em: 11 jun. 2026.
+
+\bibitem[Khanam e Hussain(2024)]{khanam2024}
+KHANAM, R.; HUSSAIN, M.
+\textbf{YOLOv11: an overview of the key architectural enhancements}.
+arXiv:2410.17725, 2024. DOI: 10.48550/arXiv.2410.17725.
+
+\bibitem[Läng et al.(2023)]{lang2023}
+LÄNG, K. \textit{et al.}
+\textbf{Artificial intelligence-supported screen reading versus standard double
+reading in the Mammography Screening with Artificial Intelligence trial (MASAI):
+interim safety analysis}.
+The Lancet Oncology, v.~24, n.~8, p.~936--944, 2023.
+DOI: 10.1016/S1470-2045(23)00298-X.
+
+\bibitem[Mohammed e Ekmekci(2024)]{mohammed2024}
+MOHAMMED, A. D.; EKMEKCI, D.
+\textbf{Breast cancer diagnosis using YOLO-based multiscale parallel CNN and
+flattened threshold Swish}.
+Applied Sciences, v.~14, n.~7, art.~2680, 2024.
+DOI: 10.3390/app14072680.
+
+\bibitem[Pawlowska et al.(2023)]{pawlowska2023}
+PAWLOWSKA, A.; KARWAT, P.; ZOLEK, N.
+\textbf{Letter to the editor. Re: ``Dataset of breast ultrasound images''}.
+Data in Brief, v.~48, art.~109247, 2023.
+DOI: 10.1016/j.dib.2023.109247.
+
+\bibitem[Pawlowska et al.(2024)]{pawlowska2024}
+PAWLOWSKA, A. \textit{et al.}
+\textbf{A curated benchmark dataset for ultrasound based breast lesion analysis
+(BrEaST)}.
+Scientific Data, v.~11, 2024. DOI: 10.1038/s41597-024-02984-z.
+
+\bibitem[Pires et al.(2004)]{pires2004}
+PIRES, S. R.; MEDEIROS, R. B.; SCHIABEL, H.
+\textbf{Banco de imagens mamográficas para treinamento na interpretação de
+imagens digitais}.
+Radiologia Brasileira, v.~37, n.~4, p.~239--244, 2004.
+DOI: 10.1590/S0100-39842004000400006.
+
+\bibitem[Prinzi et al.(2024)]{prinzi2024}
+PRINZI, F.; INSALACO, M.; ORLANDO, A.; GAGLIO, S.; VITABILE, S.
+\textbf{A YOLO-based model for breast cancer detection in mammograms}.
+Cognitive Computation, v.~16, p.~107--120, 2024.
+DOI: 10.1007/s12559-023-10189-6.
+
+\bibitem[Redmon et al.(2016)]{redmon2016}
+REDMON, J.; DIVVALA, S.; GIRSHICK, R.; FARHADI, A.
+\textbf{You Only Look Once: unified, real-time object detection}.
+In: IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2016,
+p.~779--788. DOI: 10.1109/CVPR.2016.91.
+
+\bibitem[Tian et al.(2025)]{tian2025}
+TIAN, Y.; YE, Q.; DOERMANN, D.
+\textbf{YOLOv12: attention-centric real-time object detectors}.
+arXiv:2502.12524, 2025. DOI: 10.48550/arXiv.2502.12524.
+
+\bibitem[Ultralytics(2026)]{ultralytics2026}
+ULTRALYTICS.
+\textbf{Ultralytics YOLO26 documentation}. 2025--2026.
+Disponível em: \url{https://docs.ultralytics.com/models/yolo26}.
+Acesso em: 11 jun. 2026.
+
+\bibitem[Wurzel e Martins(2022)]{wurzel2022}
+WURZEL, P.; MARTINS, M. O.
+\textbf{Classificação de imagens de mamografia com Machine Learning no auxílio
+de diagnósticos de câncer de mama}.
+Disciplinarum Scientia: Naturais e Tecnológicas, Santa Maria, v.~23, n.~2,
+p.~1--17, 2022. DOI: 10.37779/nt.v23i2.4140.
+
+\end{thebibliography}
+
+\end{document}

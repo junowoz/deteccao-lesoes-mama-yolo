@@ -1,2 +1,32 @@
-/yoloenv
-yoloenv
+# Ambientes virtuais
+yoloenv/
+yolovenv/
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Saídas de treinamento/inferência do YOLO
+runs/
+
+# Gradio
+.gradio/
+flagged/
+
+# Artefatos de compilação LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Referências bibliográficas locais (PDFs de terceiros — não redistribuir)
+RECURSOS/
+*.docx
+
+# Sistema
+.DS_Store
