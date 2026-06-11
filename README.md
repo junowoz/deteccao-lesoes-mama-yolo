@@ -6,12 +6,6 @@ Pesquisa de **visão computacional** que treina detectores da família **YOLO** 
 
 > **Aviso.** Projeto de **pesquisa acadêmica / prova de conceito** em visão computacional. O modelo **não é um dispositivo médico aprovado** (FDA/ANVISA), **não diagnostica câncer** e **não substitui** a avaliação de um profissional de saúde. Um modelo de imagem apenas **localiza uma lesão e sugere** se ela tem aparência benigna ou maligna; o diagnóstico definitivo exige correlação clínica e confirmação por biópsia.
 
-## Estado da pesquisa
-
-O pipeline (notebook) e o artigo estão **completos e prontos para execução**. O que falta é **mecânico**: rodar o notebook no Kaggle e inserir os números reais no artigo. O passo a passo exato está em **[`CHECKLIST_KAGGLE.md`](CHECKLIST_KAGGLE.md)**.
-
-> ℹ️ As métricas no artigo (`docs/artigo/main.tex`) estão marcadas em vermelho (`[XX]`) e serão preenchidas com a saída de `model.val()` após o re-treino. Nenhum resultado é inventado.
-
 ## Sobre a pesquisa
 
 O câncer de mama é o mais incidente entre mulheres no Brasil — o INCA estimou cerca de **73.610 casos novos/ano** para o triênio 2023–2025. O diagnóstico tardio, agravado pela escassez de equipamentos e radiologistas na rede pública, contribui para a mortalidade. A **ultrassonografia** é uma modalidade complementar importante (sobretudo em mamas densas), e detectores de objetos em tempo real como o **YOLO** podem servir de **ferramenta de apoio** à leitura dos exames.
@@ -36,21 +30,17 @@ Os resultados de detecção (mAP e métricas por classe) são gerados pelo noteb
 ## Estrutura do repositório
 
 ```
-├── app.py                                # Demo interativa (Gradio) com o modelo treinado
-├── model.pt                              # Pesos do modelo treinado (Git LFS, ~40 MB)
-├── requirements.txt                      # Dependências da demo
-├── CITATION.cff                          # Metadados de citação (GitHub "Cite this repository")
-├── CHECKLIST_KAGGLE.md                   # O que rodar no Kaggle e quais artefatos enviar
-├── LICENSE                               # MIT
-├── notebooks/
-│   └── treinamento-yolo11-busi.ipynb     # Pipeline completo de treino e avaliação (Kaggle)
-├── amostras/                             # Imagens de exemplo (B=benigno, M=maligno, N=normal)
+├── app.py                                      # Demo interativa (Gradio) com o modelo treinado
+├── model.pt                                    # Pesos do modelo treinado (Git LFS, ~40 MB)
+├── requirements.txt                            # Dependências da demo
+├── CITATION.cff                                # Metadados de citação (GitHub "Cite this repository")
+├── CHECKLIST_KAGGLE.md                         # O que rodar no Kaggle e quais artefatos enviar
+├── LICENSE                                     # MIT
+├── notebooks/treinamento-yolo11-busi.ipynb     # Pipeline completo de treino e avaliação (Kaggle)
+├── amostras/                                   # Imagens de exemplo (B=benigno, M=maligno, N=normal)
 └── docs/
-    ├── artigo/                           # Artigo científico em LaTeX (main.tex)
-    └── REFERENCIAS.md                    # Bibliografia comentada (ABNT)
+    └── artigo/main.tex                         # Artigo científico em LaTeX (main.tex)
 ```
-
-> A pasta `RECURSOS/` (PDFs de terceiros usados como apoio) é **ignorada** pelo Git (ver `.gitignore`), pois segue as licenças dos autores originais.
 
 ## Como executar a demo
 
@@ -74,11 +64,9 @@ A interface abre no navegador: envie uma imagem de ultrassom (há exemplos pront
 
 O notebook [`notebooks/treinamento-yolo11-busi.ipynb`](notebooks/treinamento-yolo11-busi.ipynb) contém o pipeline completo (deduplicação, geração de rótulos, divisão estratificada, treino e avaliação por `model.val()`). Foi feito para rodar no **Kaggle (GPU T4)** com o dataset BUSI anexado.
 
-Passo a passo detalhado (incluindo como anexar o dataset e quais arquivos baixar): **[`CHECKLIST_KAGGLE.md`](CHECKLIST_KAGGLE.md)**.
-
 ## Artigo
 
-O artigo científico está em [`docs/artigo/main.tex`](docs/artigo/main.tex) (LaTeX autocontido; veja as [instruções de compilação](docs/artigo/README.md)). A bibliografia comentada está em [`docs/REFERENCIAS.md`](docs/REFERENCIAS.md).
+O artigo científico está em [`docs/artigo/main.tex`](docs/artigo/main.tex).
 
 ## Como citar
 

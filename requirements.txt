@@ -1,6 +1,4 @@
 # Dependências da demo interativa (app.py).
-# Versões mínimas testadas; o ambiente exato do treino (Kaggle) é registrado
-# pelo próprio notebook (célula "Importação das Bibliotecas e Registro do Ambiente").
 gradio>=4.0
 ultralytics>=8.3
 opencv-python-headless>=4.8
