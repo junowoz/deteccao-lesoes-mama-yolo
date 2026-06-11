@@ -31,7 +31,7 @@ Os resultados de detecção (mAP e métricas por classe) são gerados pelo noteb
 
 ```
 ├── app.py                                      # Demo interativa (Gradio) com o modelo treinado
-├── model.pt                                    # Pesos do modelo treinado (Git LFS, ~40 MB)
+├── model.pt                                    # Pesos do modelo treinado (Git LFS)
 ├── requirements.txt                            # Dependências da demo
 ├── CITATION.cff                                # Metadados de citação (GitHub "Cite this repository")
 ├── CHECKLIST_KAGGLE.md                         # O que rodar no Kaggle e quais artefatos enviar
@@ -49,7 +49,7 @@ Requer Python 3.10+ e [Git LFS](https://git-lfs.com) (os pesos do modelo são ve
 ```bash
 git clone https://github.com/junowoz/deteccao-lesoes-mama-yolo.git
 cd deteccao-lesoes-mama-yolo
-git lfs install && git lfs pull   # baixa o model.pt real (~40 MB)
+git lfs install && git lfs pull   # baixa o model.pt real
 
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
