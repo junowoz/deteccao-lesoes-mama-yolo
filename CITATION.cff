@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "Se você usar este trabalho, por favor cite-o conforme abaixo."
+title: "Detecção e Classificação de Lesões Mamárias em Ultrassonografia com YOLO"
+abstract: >-
+  Prova de conceito de visão computacional que treina o detector YOLO11s para
+  localizar e classificar lesões mamárias benignas e malignas em imagens de
+  ultrassom do dataset público BUSI, com protocolo de avaliação adequado a
+  detectores (deduplicação, divisão estratificada e model.val por IoU).
+  Não é um dispositivo médico.
+type: software
+authors:
+  - family-names: "Gouvêa Cardenas"
+    given-names: "Juan José"
+  - family-names: "Ramirez Pereira Botero"
+    given-names: "Felipe"
+year: 2026
+license: MIT
+repository-code: "https://github.com/junowoz/deteccao-lesoes-mama-yolo"
+keywords:
+  - computer vision
+  - object detection
+  - YOLO
+  - breast ultrasound
+  - deep learning
+  - computer-aided diagnosis

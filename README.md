@@ -4,7 +4,13 @@ Pesquisa de **visão computacional** que treina detectores da família **YOLO** 
 
 **Autores:** Juan José Gouvêa Cardenas e Felipe Ramirez Pereira Botero
 
-> **Aviso.** Este é um projeto de **pesquisa acadêmica / prova de conceito**. O modelo **não é um dispositivo médico aprovado** (FDA/ANVISA), **não diagnostica câncer** e **não substitui** a avaliação de um profissional de saúde. Um modelo de imagem apenas **localiza uma lesão e sugere** se ela tem aparência benigna ou maligna; o diagnóstico definitivo exige correlação clínica e confirmação por biópsia.
+> **Aviso.** Projeto de **pesquisa acadêmica / prova de conceito** em visão computacional. O modelo **não é um dispositivo médico aprovado** (FDA/ANVISA), **não diagnostica câncer** e **não substitui** a avaliação de um profissional de saúde. Um modelo de imagem apenas **localiza uma lesão e sugere** se ela tem aparência benigna ou maligna; o diagnóstico definitivo exige correlação clínica e confirmação por biópsia.
+
+## Estado da pesquisa
+
+O pipeline (notebook) e o artigo estão **completos e prontos para execução**. O que falta é **mecânico**: rodar o notebook no Kaggle e inserir os números reais no artigo. O passo a passo exato está em **[`CHECKLIST_KAGGLE.md`](CHECKLIST_KAGGLE.md)**.
+
+> ℹ️ As métricas no artigo (`docs/artigo/main.tex`) estão marcadas em vermelho (`[XX]`) e serão preenchidas com a saída de `model.val()` após o re-treino. Nenhum resultado é inventado.
 
 ## Sobre a pesquisa
 
@@ -20,15 +26,12 @@ Esta pesquisa adota práticas que evitam armadilhas comuns na literatura de BUSI
 
 1. **Deduplicação antes da divisão.** O BUSI tem ~19% de duplicatas documentadas (Pawlowska et al., 2023) que, espalhadas entre os conjuntos, causam *data leakage* e inflam métricas. Removemos duplicatas por *hash* de conteúdo.
 2. **Divisão estratificada treino/validação/teste (70/15/15)**, com semente fixa e conjunto de teste cego.
-3. **Avaliação adequada a detectores.** Em vez de tratar a detecção como classificação por imagem (`classification_report` sobre a primeira caixa — o que ignora a localização), usamos `model.val()` do Ultralytics, com casamento por **IoU** e métricas **por classe**: **mAP@50**, **mAP@50–95**, precisão, revocação e F1, além da **taxa de falsos positivos** nas imagens normais.
+3. **Avaliação adequada a detectores.** Em vez de tratar a detecção como classificação por imagem, usamos `model.val()` do Ultralytics, com casamento por **IoU** e métricas **por classe**: **mAP@50**, **mAP@50–95**, precisão, revocação e F1, além da **taxa de falsos positivos** nas imagens normais.
 4. **Aumento de dados conservador** para ultrassom (rotações leves e *flip* horizontal; sem distorções geométricas agressivas, que prejudicam a anatomia).
 
 ### Resultados
 
-Os resultados de detecção (mAP e métricas por classe) são gerados pelo notebook
-([Seção 14](notebooks/treinamento-yolo11-busi.ipynb)) via `model.val()` no conjunto de teste e devem ser interpretados contra a faixa realista de detecção em **BUSI puro** reportada na literatura — e **não** contra os índices de 94–99% de *classificação* (tarefa diferente) ou de conjuntos aumentados/combinados, que não são comparáveis. A discussão completa e a tabela de métricas estão no [artigo](docs/artigo/main.tex).
-
-> ℹ️ As métricas numéricas no artigo serão preenchidas após o re-treino com este pipeline (campos marcados em vermelho no LaTeX).
+Os resultados de detecção (mAP e métricas por classe) são gerados pelo notebook ([Seção 14](notebooks/treinamento-yolo11-busi.ipynb)) via `model.val()` no conjunto de teste e devem ser interpretados contra a faixa realista de detecção em **BUSI puro** reportada na literatura — e **não** contra os índices de 94–99% de *classificação* (tarefa diferente) ou de conjuntos aumentados/combinados, que não são comparáveis. A discussão completa e as tabelas estão no [artigo](docs/artigo/main.tex).
 
 ## Estrutura do repositório
 
@@ -36,6 +39,9 @@ Os resultados de detecção (mAP e métricas por classe) são gerados pelo noteb
 ├── app.py                                # Demo interativa (Gradio) com o modelo treinado
 ├── model.pt                              # Pesos do modelo treinado (Git LFS, ~40 MB)
 ├── requirements.txt                      # Dependências da demo
+├── CITATION.cff                          # Metadados de citação (GitHub "Cite this repository")
+├── CHECKLIST_KAGGLE.md                   # O que rodar no Kaggle e quais artefatos enviar
+├── LICENSE                               # MIT
 ├── notebooks/
 │   └── treinamento-yolo11-busi.ipynb     # Pipeline completo de treino e avaliação (Kaggle)
 ├── amostras/                             # Imagens de exemplo (B=benigno, M=maligno, N=normal)
@@ -43,6 +49,8 @@ Os resultados de detecção (mAP e métricas por classe) são gerados pelo noteb
     ├── artigo/                           # Artigo científico em LaTeX (main.tex)
     └── REFERENCIAS.md                    # Bibliografia comentada (ABNT)
 ```
+
+> A pasta `RECURSOS/` (PDFs de terceiros usados como apoio) é **ignorada** pelo Git (ver `.gitignore`), pois segue as licenças dos autores originais.
 
 ## Como executar a demo
 
@@ -64,7 +72,9 @@ A interface abre no navegador: envie uma imagem de ultrassom (há exemplos pront
 
 ## Como reproduzir o treinamento
 
-O notebook [`notebooks/treinamento-yolo11-busi.ipynb`](notebooks/treinamento-yolo11-busi.ipynb) contém o pipeline completo (deduplicação, geração de rótulos, divisão estratificada, treino e avaliação por `model.val()`). Foi feito para rodar no Kaggle (GPU T4) com o dataset BUSI anexado.
+O notebook [`notebooks/treinamento-yolo11-busi.ipynb`](notebooks/treinamento-yolo11-busi.ipynb) contém o pipeline completo (deduplicação, geração de rótulos, divisão estratificada, treino e avaliação por `model.val()`). Foi feito para rodar no **Kaggle (GPU T4)** com o dataset BUSI anexado.
+
+Passo a passo detalhado (incluindo como anexar o dataset e quais arquivos baixar): **[`CHECKLIST_KAGGLE.md`](CHECKLIST_KAGGLE.md)**.
 
 ## Artigo
 
@@ -72,7 +82,7 @@ O artigo científico está em [`docs/artigo/main.tex`](docs/artigo/main.tex) (La
 
 ## Como citar
 
-> GOUVEA CARDENAS, J. J.; BOTERO, Felipe Ramirez Pereira. **Detecção e classificação de lesões mamárias em ultrassonografia com visão computacional (YOLO).** 2026. Disponível em: https://github.com/junowoz/deteccao-lesoes-mama-yolo.
+> GOUVÊA CARDENAS, J. J.; BOTERO, F. R. P. **Detecção e classificação de lesões mamárias em ultrassonografia com visão computacional (YOLO).** 2026. Disponível em: https://github.com/junowoz/deteccao-lesoes-mama-yolo.
 
 ## Licença
 
